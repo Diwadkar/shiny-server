@@ -16,36 +16,40 @@ library(stringr)
 library(viridis) 
 library(DT) 
 library(Gviz)
+library(feather)
+
 source("/srv/shiny-server/realgar/utilities/meta.R")
 source("/srv/shiny-server/realgar/utilities/comb_pval.R")
 source("/srv/shiny-server/realgar/utilities/name_convert.R")
 
-#
+
 # load descriptions of all gene expression and GWAS datasets
-Alldata_Info <- readRDS("/srv/shiny-server/databases/Microarray_data_infosheet_R.RDS")
+Alldata_Info <- read_feather("/srv/shiny-server/databases/Microarray_data_infosheet_R.feather")
 
 #then split off into gene expression and GWAS dataset info - else forest plot text columns get messed up
 GWAS_Dataset_Info <- Alldata_Info[which(Alldata_Info$App == "GWAS"),]
 Dataset_Info <- Alldata_Info[which(!(Alldata_Info$App == "GWAS")),]
 
 #load and name GEO microarray and RNA-Seq datasets
-for (i in na.omit(Dataset_Info$Unique_ID)) {assign(i, readRDS(paste0("/srv/shiny-server/databases/microarray_results/", i, ".RDS")))}
-
+for (i in na.omit(Dataset_Info$Unique_ID)) {assign(i, read_feather(paste0("/srv/shiny-server/databases/feather_files/", i, ".feather")))}
 Dataset_Info$PMID <- as.character(Dataset_Info$PMID) #else next line does not work
 Dataset_Info[is.na(Dataset_Info$PMID), "PMID"] <- ""
 Dataset_Info$Report <- as.character(c("QC"))
 
-#load info for gene tracks: gene locations, TFBS, SNPs, etc.
-tfbs <- readRDS("/srv/shiny-server/databases/tfbs_for_app.RDS") #TFBS data from ENCODE - matched to gene ids using bedtools
-snp <- readRDS("/srv/shiny-server/databases/grasp_output_for_app.RDS") #SNP data from GRASP - matched to gene ids using bedtools
-snp_eve <- readRDS("/srv/shiny-server/databases/eve_data_realgar.RDS") #SNP data from EVE - was already in hg19 - matched to gene ids using bedtools 
-snp_gabriel <- readRDS("/srv/shiny-server/databases/gabriel_data_realgar.RDS") #SNP data from GABRIEL - lifted over from hg17 to hg19 - matched to gene ids using bedtools 
-snp_fer <- readRDS("/srv/shiny-server/databases/allerg_GWAS_data_realgar.RDS") #SNP data from Ferreira - already in hg19 - matched to gene ids using bedtools
-snp_TAGC <- readRDS("/srv/shiny-server/databases/TAGC_data_realgar.RDS") #SNP data from TAGC - already in hg19 - matched to gene ids using bedtools
-gene_locations <- fread("/srv/shiny-server/databases/gene_positions.txt", header = TRUE, stringsAsFactors = FALSE) #gene location & transcript data from GENCODE
-chrom_bands <- readRDS("/srv/shiny-server/databases/chrom_bands.RDS") #chromosome band info for ideogram - makes ideogram load 25 seconds faster
-all_genes <- readRDS("/srv/shiny-server/databases/Gene_names.RDS")
-#unlike all other files, gene_locations is faster with fread than with readRDS (2s load, vs 4s)
+
+
+#Feather:load info for gene tracks: gene locations, TFBS, SNPs, etc.
+tfbs <- read_feather("/srv/shiny-server/databases/tfbs_for_app.feather") 
+snp <- read_feather("/srv/shiny-server/databases/grasp_output_for_app.feather") 
+snp_eve <- read_feather("/srv/shiny-server/databases/eve_data_realgar.feather")  
+snp_gabriel <- read_feather("/srv/shiny-server/databases/gabriel_data_realgar.feather") 
+snp_fer <- read_feather("/srv/shiny-server/databases/allerg_GWAS_data_realgar.feather") 
+snp_TAGC <- read_feather("/srv/shiny-server/databases/TAGC_data_realgar.feather")
+gene_locations <- read_feather("/srv/shiny-server/databases/gene_positions.feather")
+chrom_bands <- read_feather("/srv/shiny-server/databases/chrom_bands.feather") 
+all_genes <- read_feather("/srv/shiny-server/databases/Gene_names.feather")
+
+#unlike all other files, gene_locations is faster with fread than with read_feather (2s load, vs 4s)
 
 #compute -log10 for SNPs -- used for SNP colors
 snp <- dplyr::mutate(snp, neg_log_p = -log10(p))
